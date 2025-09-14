@@ -1,17 +1,10 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-
-const tempDir = "temp-uploads";
-
-// Ensure temp folder exists
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-}
+import os from "os";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, tempDir);
+        cb(null, os.tmpdir()); // system temp dir
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -19,14 +12,6 @@ const storage = multer.diskStorage({
     }
 });
 
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-        cb(null, true);
-    } else {
-        cb(new Error("Only image uploads allowed"), false);
-    }
-};
-
-const upload = multer({ storage, fileFilter });
+const upload = multer({ storage });
 
 export default upload;
