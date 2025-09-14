@@ -92,3 +92,29 @@ export const processFile = async (file) => {
         throw error; // Let controller decide how to respond
     }
 };
+
+const SaveToImageKit = async (gcpURL, destinationName) => {
+    try {
+        const imagekit = new ImageKit({
+            publicKey: process.env.IMAGE_KIT_PUBLIC_KEY,
+            privateKey: process.env.IMAGE_KIT_PRIVATE_KEY,
+            urlEndpoint: process.env.IMAGE_KIT_URL
+        })
+
+        const imagekitResponse = await imagekit.upload({
+            file: gcpURL,
+            fileName: path.basename(destinationName),
+            useUniqueFileName: true
+        })
+
+        console.log('✅ Uploaded to ImageKit:', imagekitResponse.url)
+        return imagekitResponse.url
+    } catch (error) {
+        console.error('❌ Error uploading to ImageKit:', {
+            message: error.message,
+            response: error.response?.data,
+            stack: error.stack
+        })
+        throw error
+    }
+}
