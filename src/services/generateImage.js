@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs/promises"; // Use promises version
 import ImageKit from "imagekit";
 import path from "path";
+import { generateSystemPrompt } from "./systemPrompt.js";
 
 export const preProcessImage = async (file, data) => {
     if (!file) {
@@ -26,14 +27,14 @@ export const preProcessImage = async (file, data) => {
     let prompt = "Generate a creative image";
 
     if (type === "flat-lay") {
-        prompt = `
-        Professional flat lay photography of a ${product} laid flat on complementary background, styled with complementary items, overhead shot, natural lighting, clean complementary background, commercial fashion photography, Instagram-worthy composition, 25% negative space for clean aesthetic
-        `.trim();
+        prompt = generateSystemPrompt(1, "Flat-lay");
     } else if (type === "on-model") {
-        prompt = `
-        Photorealistic image of a indian model wearing ${product}, in a dynamic pose maintaining original design of the product. Complementary ${environment} environment and natural lightning.
-        `.trim();
+        prompt = generateSystemPrompt(2, "on-model", environment);
+
     }
+
+    console.log("Using prompt:", prompt);
+
 
     // Read file once and reuse the buffer
     let fileBuffer;
@@ -57,17 +58,45 @@ export const preProcessImage = async (file, data) => {
         // Don't throw here - continue processing
     }
 
-    // Create promises array with proper error handling
+    const resp = await geminiGeneratePrompt(base64, mimeType, prompt);
+
+
+    if (!resp) {
+        throw new Error("No response from Gemini API");
+    }
+
     const generatePromises = [];
-    for (let i = 0; i < batchSize; i++) {
+
+
+    resp.forEach((obj, index) => {
+        console.log(`\n=== Object ${index + 1} ===`);
+
+        const varPrompt = formatSimple(obj)
+        console.log("Using varied prompt:", varPrompt);
         generatePromises.push(
-            generateImage(base64, mimeType, prompt, i + 1)
+            generateImage(base64, mimeType, varPrompt, index + 1)
                 .catch(error => {
-                    console.error(`Error generating image ${i + 1}:`, error);
-                    return { error: error.message, index: i + 1 };
+                    console.error(`Error generating image ${index + 1}:`, error);
+                    return { error: error.message, index: index + 1 };
                 })
         );
-    }
+
+        console.log('-------------------'); // Separator between objects
+    });
+
+
+
+
+    // Create promises array with proper error handling
+    // for (let i = 0; i < batchSize; i++) {
+    //     generatePromises.push(
+    //         generateImage(base64, mimeType, prompt, i + 1)
+    //             .catch(error => {
+    //                 console.error(`Error generating image ${i + 1}:`, error);
+    //                 return { error: error.message, index: i + 1 };
+    //             })
+    //     );
+    // }
 
     try {
         const results = await Promise.allSettled(generatePromises);
@@ -326,3 +355,86 @@ const SaveToImageKit = async (inlineData, destinationName) => {
     }
 };
 
+const formatSimple = (obj) => {
+    let result = '';
+
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== null && value !== undefined && value !== '') {
+            result += `${key}: ${value}\n\n`; // Double \n for single line space
+        }
+    }
+
+    return result.trim(); // Remove trailing newlines
+}
+
+
+export const geminiGeneratePrompt = async (file, mimeType, sysInst) => {
+    if (!file) {
+        throw new Error("No file uploaded");
+    }
+
+    try {
+
+        // 1) Call Gemini API with the image data
+        let response;
+        try {
+            const ai = new GoogleGenAI({});
+            response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: [
+                    {
+                        inlineData: {
+                            mimeType,
+                            data: file,
+                        },
+                    },
+                    {
+                        text: `
+              Analyze the image.
+            `.trim(),
+                    },
+                ],
+                config: {
+                    responseMimeType: "application/json",
+                    systemInstruction: sysInst.trim(),
+                },
+            });
+        } catch (err) {
+            throw new Error(`Gemini API call failed: ${err.message}`);
+        }
+
+        if (!response || !response.text) {
+            throw new Error("Gemini API returned empty response");
+        }
+
+        let text = response.text;
+        console.log("Gemini response:", text);
+
+        text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+
+        let parsed;
+        try {
+            // Try to parse directly first (most common case)
+            parsed = JSON.parse(text);
+        } catch (err) {
+            try {
+                // If that fails, try to extract JSON (array or object)
+                const jsonMatch = text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+                if (jsonMatch) {
+                    parsed = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error("No valid JSON found in response");
+                }
+            } catch (parseErr) {
+                console.error("JSON parsing failed:", parseErr);
+                console.error("Original text:", text);
+                throw new Error("Failed to parse Gemini response as JSON");
+            }
+        }
+
+        return parsed;
+    } catch (error) {
+        console.error("processFile error:", error);
+        throw error; // Let controller decide how to respond
+    }
+};
