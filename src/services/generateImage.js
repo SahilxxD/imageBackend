@@ -27,9 +27,9 @@ export const preProcessImage = async (file, data) => {
     let prompt = "Generate a creative image";
 
     if (type === "flat-lay") {
-        prompt = generateSystemPrompt(1, "Flat-lay");
+        prompt = generateSystemPrompt(batchSize, "Flat-lay");
     } else if (type === "on-model") {
-        prompt = generateSystemPrompt(2, "on-model", environment);
+        prompt = generateSystemPrompt(batchSize, "on-model", environment);
 
     }
 
@@ -74,7 +74,7 @@ export const preProcessImage = async (file, data) => {
         const varPrompt = formatSimple(obj)
         console.log("Using varied prompt:", varPrompt);
         generatePromises.push(
-            generateImage(base64, mimeType, varPrompt, index + 1)
+            generateImage(base64, mimeType, varPrompt, index + 1, type)
                 .catch(error => {
                     console.error(`Error generating image ${index + 1}:`, error);
                     return { error: error.message, index: index + 1 };
@@ -84,19 +84,6 @@ export const preProcessImage = async (file, data) => {
         console.log('-------------------'); // Separator between objects
     });
 
-
-
-
-    // Create promises array with proper error handling
-    // for (let i = 0; i < batchSize; i++) {
-    //     generatePromises.push(
-    //         generateImage(base64, mimeType, prompt, i + 1)
-    //             .catch(error => {
-    //                 console.error(`Error generating image ${i + 1}:`, error);
-    //                 return { error: error.message, index: i + 1 };
-    //             })
-    //     );
-    // }
 
     try {
         const results = await Promise.allSettled(generatePromises);
@@ -117,8 +104,9 @@ export const preProcessImage = async (file, data) => {
         });
 
         return {
-            prompt,
             batchSize,
+            type,
+            environment,
             successful: successful.length,
             failed: failed.length,
             results: successful,
@@ -218,6 +206,77 @@ export const generateImage = async (base64Data, mimeType, prompt, imageIndex = 1
         throw error;
     }
 };
+
+export const generatePoses = async (data) => {
+
+    if (!data || !data.product || !data.url) {
+        throw new Error("product is not provided");
+    }
+
+    const { url, product = 'this product', environment = 'default' } = data;
+
+    // Read file once and reuse the buffer
+    let fileBuffer;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(`Failed to fetch file: ${res.status} ${res.statusText}`);
+        }
+        const ab = await res.arrayBuffer(); // safe in Node 18+ or browsers
+        fileBuffer = Buffer.from(ab);
+    } catch (err) {
+        console.error("Failed to download file:", err);
+        throw new Error("Failed to read uploaded file from URL");
+    }
+
+    // Convert to Base64 once
+    const base64 = fileBuffer.toString("base64");
+    const mimeType = file.mimetype;
+
+    const generatePromises = [];
+    const poses = [
+        `Shot with natural grain of a model posing to show side profile of ${product}, keeping ${product}, model and environment exactly same. `,
+        `Shot with natural grain of a Model posing showing the back of the ${product}, keeping ${product}, model and environment exactly same.`,
+        `Macro-shot with natrual grain of a model reviewing craftmanship of ${product}, keeping ${product}, model and environment exactly same.`,
+        `Photorealistic shot with natural grain of model with ${product} sitting on complementary item. Keeping ${product}, model and environment exactly same.`
+    ];
+
+    for (let i = 0; i < poses.length; i++) {
+        generatePromises.push(generateImage(base64, mimeType, `A ${poses[i]}`));
+    }
+
+    try {
+        const results = await Promise.allSettled(generatePromises);
+
+        // Separate successful and failed results
+        const successful = [];
+        const failed = [];
+
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && !result.value.error) {
+                successful.push(result.value);
+            } else {
+                const errorMsg = result.status === 'rejected'
+                    ? result.reason?.message || 'Unknown error'
+                    : result.value.error;
+                failed.push({ index: index + 1, error: errorMsg });
+            }
+        });
+
+        return {
+            batchSize: 4,
+            type: 'on-model',
+            environment,
+            successful: successful.length,
+            failed: failed.length,
+            results: successful,
+            errors: failed
+        };
+    } catch (err) {
+        console.error("Error generating poses:", err);
+        throw new Error("Failed to generate poses");
+    }
+}
 
 // const saveToImageKit = async (inlineData, destinationName) => {
 //     if (!inlineData?.data || !inlineData?.mimeType) {
@@ -380,7 +439,7 @@ export const geminiGeneratePrompt = async (file, mimeType, sysInst) => {
         try {
             const ai = new GoogleGenAI({});
             response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
+                model: "gemini-2.5-flash-lite",
                 contents: [
                     {
                         inlineData: {

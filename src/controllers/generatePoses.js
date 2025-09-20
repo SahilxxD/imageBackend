@@ -1,15 +1,19 @@
-import { preProcessImage } from "../services/generateImage.js";
+import { generatePoses } from "../services/generateImage.js";
 import User from "../models/User.js";
 import Asset from "../models/Asset.js";
 
-export const generateImage = async (req, res) => {
+export const poses = async (req, res) => {
     console.log('User making request:', req.user);
     const user = await User.findById(req.user._id);
     if (!user) {
         return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const requestedImages = parseInt(req.body.batchSize) || 1;
+    if (!req.url) {
+        return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const requestedImages = 4;
     if (user.credits < requestedImages) {
         return res.status(402).json({ success: false, message: "Insufficient credits" });
     }
@@ -21,7 +25,7 @@ export const generateImage = async (req, res) => {
 
     try {
         // Call the image generation service
-        const fileData = await preProcessImage(req.file, req.body);
+        const fileData = await generatePoses(req.body);
 
         // If generation was partially or fully successful, record the assets
         if (fileData.successful > 0) {
@@ -51,7 +55,7 @@ export const generateImage = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Image generation complete",
+            message: "Poses generation complete",
             data: fileData,
             remainingCredits: user.credits,
         });
