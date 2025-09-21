@@ -14,7 +14,7 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/', session: false }), (req, res) => {
     const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '12h' });
     // Redirect to the frontend with the token in the URL params
-    res.redirect(`http://localhost:5173?token=${token}`);
+    res.redirect(`https://image-r85d.vercel.app?token=${token}`);
 });
 
 router.get("/me", protect, getMe);
