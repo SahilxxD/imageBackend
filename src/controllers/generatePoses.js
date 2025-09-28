@@ -25,7 +25,7 @@ export const poses = async (req, res) => {
 
     try {
         // Call the image generation service
-        const fileData = await generatePoses(req.body);
+        const fileData = await generatePoses(req);
 
         // If generation was partially or fully successful, record the assets
         if (fileData.successful > 0) {
