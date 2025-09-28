@@ -208,7 +208,7 @@ export const generateImage = async (base64Data, mimeType, prompt, imageIndex = 1
 };
 
 export const generatePoses = async (data) => {
-
+    console.log("data: ",data)
     if (!data || !data.product || !data.url) {
         throw new Error("product is not provided");
     }
