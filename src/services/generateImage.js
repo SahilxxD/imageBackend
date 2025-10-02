@@ -141,8 +141,34 @@ export const generateImage = async (base64Data, mimeType, prompt, imageIndex = 1
             },
         ];
 
+        const siText1 = { text: `You are a advance image generation model. Your task is to create a single, ultra-realistic, natural grains, and high-resolution image based on the detailed description and technical parameters provided in user instruction.` };
+
         const config = {
-            responseModalities: ["IMAGE", "TEXT"],
+            maxOutputTokens: 32768,
+            temperature: 0.2,
+            topP: 0.25,
+            responseModalities: ["TEXT", "IMAGE"],
+            safetySettings: [
+                {
+                    category: 'HARM_CATEGORY_HATE_SPEECH',
+                    threshold: 'OFF',
+                },
+                {
+                    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    threshold: 'OFF',
+                },
+                {
+                    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    threshold: 'OFF',
+                },
+                {
+                    category: 'HARM_CATEGORY_HARASSMENT',
+                    threshold: 'OFF',
+                }
+            ],
+            systemInstruction: {
+                parts: [siText1]
+            },
         };
 
         const model = "gemini-2.5-flash-image-preview";
@@ -153,7 +179,7 @@ export const generateImage = async (base64Data, mimeType, prompt, imageIndex = 1
         let response;
         try {
             const ai = new GoogleGenAI({
-                apiKey: process.env.GOOGLE_AI_API_KEY // Make sure API key is properly set
+                apiKey: process.env.GOOGLE_CLOUD_API_KEY // Make sure API key is properly set
             });
 
             response = await ai.models.generateContent({
@@ -208,7 +234,7 @@ export const generateImage = async (base64Data, mimeType, prompt, imageIndex = 1
 };
 
 export const generatePoses = async (data) => {
-    console.log("data: ",data)
+    console.log("data: ", data)
     if (!data || !data.product || !data.url) {
         throw new Error("product is not provided");
     }
@@ -231,7 +257,7 @@ export const generatePoses = async (data) => {
 
     // Convert to Base64 once
     const base64 = fileBuffer.toString("base64");
-    const mimeType = file.mimetype;
+    const mimeType = 'image/png'; // Assume PNG for now, could be improved by detecting from URL or response headers
 
     const generatePromises = [];
     const poses = [

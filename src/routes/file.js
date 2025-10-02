@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/upload", protect, upload.single("file"), uploadFile);
 router.post("/generateImage", protect, upload.single("file"), generateImage);
-router.post("/generatePoses", protect, poses);
+router.post("/generatePoses", protect, upload.single("file"), poses);
 
 
 export default router;

@@ -9,7 +9,7 @@ export const poses = async (req, res) => {
         return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (!req.url) {
+    if (!req.body.url) {
         return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
@@ -25,7 +25,7 @@ export const poses = async (req, res) => {
 
     try {
         // Call the image generation service
-        const fileData = await generatePoses(req);
+        const fileData = await generatePoses(req.body);
 
         // If generation was partially or fully successful, record the assets
         if (fileData.successful > 0) {
