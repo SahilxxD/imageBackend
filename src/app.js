@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import "./config/passport.js"; // 👈 important: loads the strategy
 import { connectDB } from './config/db.js';
 import user from "./routes/user.js";
+import clientRoutes from "./routes/client.js";
 
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api", fileRoutes, auth, user);
+app.use("/api/clients", clientRoutes);
 
 
 export default app;

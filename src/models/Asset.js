@@ -11,6 +11,10 @@ const AssetSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  inputUrl: {
+    type: String,
+    // required: true,
+  },
   prompt: {
     type: String,
   },
