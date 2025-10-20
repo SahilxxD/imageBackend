@@ -8,10 +8,10 @@ import { generateSeedream } from "../controllers/generateSeedream.js";
 
 const router = express.Router();
 
-router.post("/upload", protect, upload.any(), uploadFile);
-router.post("/generateImage", protect, upload.any(), generateImage);
+router.post("/upload", protect, upload.single("file"), uploadFile);
+router.post("/generateImage", protect, upload.single("file"), generateImage);
 router.post("/generateImageNew", upload.any(), generateSeedream);
-router.post("/generatePoses", protect, upload.any(), poses);
+router.post("/generatePoses", protect, upload.single("file"), poses);
 
 
 export default router;
