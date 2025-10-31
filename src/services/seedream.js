@@ -17,7 +17,6 @@ export const seedream = async (file, refPrompt) => {
 
     prompt = seedreamPrompt();
 
-    console.log("Using prompt:", prompt);
 
     // Read file once and reuse the buffer
     let fileBuffer;
@@ -57,7 +56,9 @@ export const seedream = async (file, refPrompt) => {
     }
 
     const resp = await geminiGeneratePrompt(base64, mimeType, prompt, refPrompt);
-
+    console.log('this is the prompt generate: ',resp);
+    console.log('prompt used: ',refPrompt);
+    return 
 
     if (!resp) {
         throw new Error("No response from Gemini API");
