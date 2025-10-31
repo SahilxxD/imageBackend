@@ -117,8 +117,7 @@ export const geminiGeneratePrompt = async (file, mimeType, sysInst, refPrompt) =
                         "
 
                         TASK:
-                        Analyze the uploaded image and generate a new prompt written in the exact same descriptive format and tone as the reference prompt above.
-
+                        Analyze the uploaded image and modify the above referenced prompt slightly for the shirt present in the image. be very accurate with shirts colour.
                         REQUIREMENTS:
                         - Update the outfit details to match the clothing and accessories visible in the uploaded image.
                         - Maintain the same structure, flow, and professional tone as the reference prompt.
